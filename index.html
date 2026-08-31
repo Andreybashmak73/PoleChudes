@@ -124,15 +124,16 @@
       overflow: hidden; background: #111;
     }
     .sector-label {
-      position: absolute; width: 28%; transform: translate(-50%, -50%);
+      position: absolute; left: 50%; top: 50%; width: 38%;
+      transform-origin: 0 50%;
       font-family: "Russo One", sans-serif;
-      font-size: clamp(22px, 5.2vmin, 40px); line-height: 1;
+      font-size: clamp(16px, 3.6vmin, 28px); line-height: 1.05;
       text-align: center; pointer-events: none;
       text-shadow: 0 2px 0 rgba(0,0,0,.35); white-space: nowrap;
     }
     .sector-label.long {
-      white-space: normal; width: 30%;
-      font-size: clamp(13px, 2.8vmin, 20px); line-height: 1.15;
+      white-space: normal;
+      font-size: clamp(11px, 2.4vmin, 16px); line-height: 1.1;
     }
     .hub {
       position: absolute; left: 50%; top: 50%; width: 22%; height: 22%;
@@ -218,10 +219,7 @@
         const el = document.createElement("div");
         el.className = "sector-label" + (label.length > 6 ? " long" : "");
         el.textContent = label;
-        const angle = (i * slice - 90) * Math.PI / 180;
-        const radius = 34;
-        el.style.left = "calc(50% + " + (Math.cos(angle) * radius) + "%)";
-        el.style.top = "calc(50% + " + (Math.sin(angle) * radius) + "%)";
+        el.style.transform = "rotate(" + (i * slice - 90) + "deg) translate(22%, -50%)";
         el.style.color = TEXT[i % 2];
         wheel.appendChild(el);
       });
