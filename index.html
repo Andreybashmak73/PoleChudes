@@ -81,14 +81,15 @@
       padding: 14px 36px; cursor: pointer;
       box-shadow: 0 6px 0 #1f2212, 0 12px 18px rgba(0,0,0,.3);
     }
-    .btn:hover { filter: brightness(1.08); }
-    .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #1f2212; }
+    .btn:hover:not(:disabled) { filter: brightness(1.08); }
+    .btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #1f2212; }
+    .btn:disabled { opacity: .55; cursor: default; }
     .btn.ghost {
       background: transparent; color: #d7cb96; box-shadow: none;
       border-color: rgba(215,203,150,.55); font-family: Oswald, sans-serif;
       font-size: 15px; padding: 10px 18px;
     }
-    #game { gap: 16px; }
+    #game { gap: 16px; padding-top: 40px; }
     .game-head { text-align: center; }
     .game-head h2 {
       font-family: "Black Ops One", sans-serif;
@@ -101,6 +102,7 @@
     }
     .wheel-wrap {
       position: relative; width: min(78vmin, 560px); height: min(78vmin, 560px);
+      overflow: visible;
       filter: drop-shadow(0 18px 28px rgba(0,0,0,.5));
     }
     .pointer {
@@ -124,16 +126,16 @@
       overflow: hidden; background: #111;
     }
     .sector-label {
-      position: absolute; left: 50%; top: 50%; width: 38%;
+      position: absolute; left: 50%; top: 50%; width: 42%;
       transform-origin: 0 50%;
       font-family: "Russo One", sans-serif;
-      font-size: clamp(16px, 3.6vmin, 28px); line-height: 1.05;
+      font-size: clamp(14px, 3.2vmin, 24px); line-height: 1.05;
       text-align: center; pointer-events: none;
       text-shadow: 0 2px 0 rgba(0,0,0,.35); white-space: nowrap;
     }
     .sector-label.long {
       white-space: normal;
-      font-size: clamp(11px, 2.4vmin, 16px); line-height: 1.1;
+      font-size: clamp(10px, 2.2vmin, 15px); line-height: 1.1;
     }
     .hub {
       position: absolute; left: 50%; top: 50%; width: 22%; height: 22%;
@@ -157,8 +159,11 @@
       font-family: "Black Ops One", sans-serif;
       font-size: clamp(26px, 6vw, 42px); margin: 10px 0 18px; color: #efe6c2;
     }
-    .hint { font-size: 13px; opacity: .65; text-align: center; }
+    .hint { font-size: 13px; opacity: .82; text-align: center; color: #ddd0a8; }
     audio { display: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .btn:active:not(:disabled) { transform: none; }
+    }
   </style>
 </head>
 <body>
@@ -170,7 +175,7 @@
       </div>
       <div class="eyebrow">Проткнут или нет?</div>
       <h1 class="title">Что за антенна?</h1>
-      <p class="subtitle">Крутите барабан. Узнай что за антенна была!ь</p>
+      <p class="subtitle">Крутите барабан. Узнай, что за антенна была!</p>
       <button class="btn" id="startBtn">Начать</button>
     </div>
   </section>
@@ -210,8 +215,15 @@
     const resultText = document.getElementById("resultText");
     const bgm = document.getElementById("bgm");
     const muteBtn = document.getElementById("muteBtn");
+    const spinBtn = document.getElementById("spinBtn");
     const slice = 360 / SECTORS.length;
     let rotation = 0, spinning = false, muted = false;
+
+    function setSpinning(value) {
+      spinning = value;
+      spinBtn.disabled = value;
+    }
+
     function buildWheel() {
       const stops = SECTORS.map((_, i) => COLORS[i % 2] + " " + (i * slice).toFixed(3) + "deg " + ((i + 1) * slice).toFixed(3) + "deg").join(", ");
       wheel.style.background = "conic-gradient(from " + (-slice / 2) + "deg, " + stops + ")";
@@ -219,24 +231,27 @@
         const el = document.createElement("div");
         el.className = "sector-label" + (label.length > 6 ? " long" : "");
         el.textContent = label;
-        el.style.transform = "rotate(" + (i * slice - 90) + "deg) translate(22%, -50%)";
+        el.style.transform = "rotate(" + (i * slice - 90) + "deg) translate(24%, -50%)";
         el.style.color = TEXT[i % 2];
         wheel.appendChild(el);
       });
     }
+
     function playMusic() {
       bgm.volume = 0.55;
       const p = bgm.play();
       if (p && p.catch) p.catch(function(){});
     }
+
     function sectorAtPointer() {
       const norm = ((rotation % 360) + 360) % 360;
       const deg = (360 - norm) % 360;
       return Math.floor((deg + slice / 2) / slice) % SECTORS.length;
     }
+
     function spin() {
       if (spinning) return;
-      spinning = true;
+      setSpinning(true);
       result.classList.remove("show");
       const extra = 4 + Math.floor(Math.random() * 4);
       const targetIndex = Math.floor(Math.random() * SECTORS.length);
@@ -247,7 +262,9 @@
       if (delta < 0) delta += 360;
       const final = rotation + extra * 360 + delta;
       const start = rotation, change = final - start;
-      const duration = 4200 + Math.random() * 1200, t0 = performance.now();
+      const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const duration = reduceMotion ? 600 : 4200 + Math.random() * 1200;
+      const t0 = performance.now();
       function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
       function frame(now) {
         const t = Math.min(1, (now - t0) / duration);
@@ -255,22 +272,25 @@
         wheel.style.transform = "rotate(" + rotation + "deg)";
         if (t < 1) requestAnimationFrame(frame);
         else {
-          spinning = false;
+          setSpinning(false);
           resultText.textContent = SECTORS[sectorAtPointer()];
           result.classList.add("show");
         }
       }
       requestAnimationFrame(frame);
     }
+
     document.getElementById("startBtn").addEventListener("click", function() {
       startScreen.classList.remove("active");
       gameScreen.classList.add("active");
       playMusic();
     });
-    document.getElementById("spinBtn").addEventListener("click", spin);
+    spinBtn.addEventListener("click", spin);
     wheel.addEventListener("click", spin);
     document.querySelector(".hub").addEventListener("click", spin);
-    document.getElementById("againBtn").addEventListener("click", function() { result.classList.remove("show"); });
+    document.getElementById("againBtn").addEventListener("click", function() {
+      result.classList.remove("show");
+    });
     muteBtn.addEventListener("click", function() {
       muted = !muted;
       bgm.muted = muted;
